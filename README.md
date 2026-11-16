@@ -2,7 +2,7 @@
 
 A terminal Sudoku game written in Pascal (Turbo Pascal style, `crt` unit) for the
 Algorithms I class in college in 2012. The original source is kept unchanged in
-[`pascal/Sudoku 2.2.txt`](pascal/Sudoku%202.2.txt). The game text is in Portuguese.
+[`original/Sudoku 2.2.txt`](original/Sudoku%202.2.txt). The game text is in Portuguese.
 
 ## Run with Docker
 
@@ -37,7 +37,7 @@ survive between runs.
 ```text
 Dockerfile
   build stage    debian:13.7-slim + fp-compiler 3.2.2
-                 fpc -Mtp "pascal/Sudoku 2.2.txt"  ->  statically linked binary
+                 fpc -Mtp "original/Sudoku 2.2.txt"  ->  statically linked binary
   runtime stage  debian:13.7-slim
                  docker/entrypoint.sh
                    script -qf -c sudoku         # the game gets its own pty
