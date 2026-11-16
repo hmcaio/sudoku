@@ -4,6 +4,19 @@ A terminal Sudoku game written in Pascal (Turbo Pascal style, `crt` unit) for th
 Algorithms I class in college in 2012. The original source is kept unchanged in
 [`original/Sudoku 2.2.txt`](original/Sudoku%202.2.txt). The game text is in Portuguese.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/menu.svg" alt="Main menu"></td>
+    <td><img src="docs/screenshots/grades.svg" alt="Level and grade selection with best times"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/game.svg" alt="Game grid, partly filled"></td>
+    <td><img src="docs/screenshots/win.svg" alt="Solved puzzle"></td>
+  </tr>
+</table>
+
 ## Run with Docker
 
 Requires Docker and a terminal of at least 80x24.
