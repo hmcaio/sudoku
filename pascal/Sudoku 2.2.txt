@@ -1,0 +1,1386 @@
+program     Sudoku;
+
+uses        crt;
+
+const
+
+s= [02,	03,	 04,	    07,				11,		13,	14,	15,					20,	21,	22,			25,				29,		31,				35,
+36,				40,		42,				46,		48,			51,			54,				58,		60,			63,			66,				70,
+71,						77,				81,		83,				87,		89,				93,		95,		97,				101,			105,
+	107,108,109,		112,			116,	118,			122,	124,			128,	130,131,				136,			140,
+				145,	147,			151,	153,			157,	159,			163,	165,	167,			171,			175,
+176,			180,	182,			186,	188,		191,		194,			198,	200,		203,		206,			210,
+	212,213,214,			218,219,220,		223,224,225,				230,231,232,		235,			239,		242,243,244];
+
+            x1=                         1;
+            y1=                         1;
+            x2=                         80;
+            y2=                         24;
+            bordachr=                   #178;
+            corborda=                   9;   { azul }
+            cortexto=                   15;  { branco }
+            cortitulo=                  15;  { branco }
+            corseta=                    10;   { azul }
+
+type
+            string81=                   string[81];
+            DuoVet=                     array [1..2] of string81;
+            Niveis=                     array [1..5] of DuoVet;
+            Tempos=                     record
+                                              grade: array [1..5] of integer;
+                                        end;
+
+var
+            option1:                         byte;
+            tecla:                           char;
+            x, y:                            byte;
+            GDB:                             array [1..3] of Niveis;
+            Binstr:                          string81;
+            Usernume:                        string81;
+            infoy:                           byte;
+
+            optionnivel, optiongrade:                byte;
+            Sim:                                     boolean;
+            SN:                                      char;
+            quitall, quit2, quit3, quit4, quit5:     boolean;
+            gridx, gridy:                            byte;
+            z:                                       byte;
+            min, secdec, secuni:                     byte;
+            mile:                                    integer;
+
+            BD:                                      file of Tempos;
+            nivel:                                   Tempos;
+            alfa, beta:                              byte;
+
+////////////////////////////////////////////////////////////////////////////////
+procedure Matrix;
+
+var
+                a, b, cont, num, cor:  byte;
+
+begin
+     delay(50);
+     randomize;
+     {for c:= 1 to 5 do
+         begin}
+              cont:= 1;
+              for a:= 1 to 7 do
+                  begin
+                  for b:= 1 to 35 do
+                      begin
+                           if cont in s then
+                              begin
+                                   gotoxy(b, a);
+                                   {if c<= 10 then
+                                      gotoxy(b, a+c)
+                                   else
+                                       gotoxy(b, a+11);}
+                                   num:= random(10);
+                                   if num mod 4= 0 then
+                                      cor:= 2
+                                   else
+                                       cor:= 10;
+                                   textcolor(cor);
+                                   write(num);
+                              end;
+                           inc(cont, 1);
+                      end;
+                  end;
+              {if c<=10 then
+                    begin
+                         gotoxy(1, 1);
+                         insline;
+                         gotoxy(21, 2);
+                    end;
+         end;}
+end;
+////////////////////////////////////////////////////////////////////////////////
+procedure Borda;  { procedure p/ desenhar a borda }
+
+var
+            a, b:           byte;
+
+begin
+     textcolor(corborda);
+     for a:= y1 to y2 do
+         for b:= x1 to x2 do
+             begin
+                  gotoxy(b, a);
+                  if a in [y1, y2] then
+                     write(bordachr)
+                  else
+                      if b in [x1, x2] then
+                         write(bordachr);
+             end;
+     textcolor(cortexto);
+end;  { fim procedure Borda }
+////////////////////////////////////////////////////////////////////////////////
+procedure Centralizar(texto: string; xi, xf, cor: byte);  { centraliza o texto com as coordenadas e cor fornecidas por parametro }
+
+begin
+     x:= wherex;
+     y:= wherey;
+     gotoxy(((xf-xi) div 2)-(length(texto) div 2)+2, y);
+     textcolor(cor);
+     writeln(texto);
+     textcolor(cortexto);
+     gotoxy(x, y+2);
+end;  { fim procedure Centralizar }
+////////////////////////////////////////////////////////////////////////////////
+procedure Datilografar(text: string);  { efeito: digita cada caractere do texto por vez }
+
+var
+            c:              byte;
+            tempo:          byte;
+            wait:           boolean;
+            aux:            char;
+
+begin
+     tempo:= 50;
+     wait:= false;
+     for c:= 1 to length(text) do
+         begin
+              write(text[c]);
+              delay(tempo);
+              if keypressed then
+                 begin
+                      tempo:= 0;
+                      wait:= true;
+                 end;
+         end;
+     if wait then
+        aux:= readkey;
+        if aux= #0 then
+           readkey;
+     aux:= readkey;
+     if aux= #0 then
+        readkey;
+end;  { fim procedure Datilografar }
+////////////////////////////////////////////////////////////////////////////////
+procedure GradeMolde;  { desenha o esqueleto da grade, sem numeros }
+
+var
+          a, b:         word;
+
+begin
+     textcolor(2);
+     write(#218);  { primeira linha }
+     for b:= 2 to 18 do
+         if b mod 2= 0 then
+            write(#196)
+         else
+             write(#194);
+     writeln(#191);
+     for a:= 2 to 18 do  { linhas do meio }
+         if a mod 2= 0 then
+            begin
+                 for b:= 1 to 9 do
+                     write(#179, ' ');
+                 writeln(#179);
+            end
+         else
+             begin
+                  write(#195);
+                  for b:= 2 to 18 do
+                      if b mod 2= 0 then
+                         write(#196)
+                      else
+                          write(#197);
+                  writeln(#180);
+             end;
+     write(#192);  { ultima linha }
+     for b:= 2 to 18 do
+         if b mod 2= 0 then
+            write(#196)
+         else
+             write(#193);
+     writeln(#217);
+     textcolor(cortexto);
+end;  { fim procedure GradeMolde }
+////////////////////////////////////////////////////////////////////////////////
+procedure WritenaGrade(what: char; erro: boolean);  { especifica p/ escrever numeros na grade, varia cor do texto e fundo }
+
+var
+          coruser, corfixo:        byte;
+
+begin
+     x:= wherex;
+     y:= wherey;
+     corfixo:= 10;  { cor dos numeros fixos sempre e verde claro }
+     if erro then  { se for um numero errado digitado pelo usuario }
+        begin
+             coruser:= 12;  { muda a cor do numero p/ vermelho }
+        end
+     else  { se for um numero possivel }
+         begin
+              coruser:= 15;  { muda a cor do numero p/ branco }
+         end;
+
+     if Binstr[x div 2 + (y div 2 - 1)*9] = '0' then
+        if GDB[optionnivel][optiongrade][2][x div 2 + (y div 2 - 1)*9]= '0' then
+           begin
+                textcolor(coruser);
+                if ((x div 7) + (y div 7)) mod 2 = 0 then
+                   textbackground(1);
+           end
+        else
+            begin
+                 textcolor(corfixo);
+                 if ((x div 7) + (y div 7)) mod 2 = 0 then
+                    textbackground(1);
+            end;
+
+     write(what);
+
+     textbackground(0);
+     textcolor(cortexto);
+     gotoxy(x, y);
+end;  { fim procedure WritenaGrade }
+////////////////////////////////////////////////////////////////////////////////
+procedure PaintBack(t: byte);
+
+var
+          a, b:          byte;
+          count:          byte;
+
+begin
+     count:= 0;
+     for a:= 1 to 9 do
+         for b:= 1 to 9 do
+             begin
+                  count:= count+1;  { aki preciso de três contadores: dois para as coordenadas (a e b) e um para a posicao na string (cont) }
+                  gotoxy(b*2, a*2);
+
+                  if GDB[optionnivel][optiongrade][2][count]= '1' then
+                     begin
+                          WritenaGrade(GDB[optionnivel][optiongrade][1][count], false);
+                          delay(t);
+                     end
+                  else
+                      WritenaGrade(' ', false);
+             end;
+end;  { fim procedure PaintBack }
+////////////////////////////////////////////////////////////////////////////////
+procedure RevSol;  { abre uma janela a direita revelando a solucao para a grade }
+
+var
+          a, b:                 byte;
+          count:                byte;
+
+begin
+     textcolor(corborda);
+     window(41, y1+1, x2-1, y2-1);
+     b:= 20;
+     for a:= 0 to 19 do  { efeito da janela }
+         begin
+              gotoxy(b-a, 22);
+              write(bordachr);
+              gotoxy(b+a, 22);
+              write(bordachr);
+              gotoxy(1, 1);
+              delline;
+              delay(40);
+         end;
+     for a:= 1 to 21 do
+         begin
+              if a <> 1 then
+                 begin
+                      gotoxy(1, 22);
+                      textcolor(1);
+                      write(#179);
+                      gotoxy(1, 1);
+                 end;
+              delline;
+              delay(40);
+         end;  { fim efeito da janela }
+
+     window(x1+50, y1+2, x1+69, y1+22);
+     GradeMolde;  { desenha esqueleto da grade sem numeros }
+     Binstr:= '000000000000000000000000000000000000000000000000000000000000000000000000000000000';  { zera posicoes ocupadas p/ poder pintar o fundo da grade }
+     PaintBack(0);  { pinta o fundo com os numeros fixos }
+     delay(500);
+
+     count:= 0;
+     for a:= 1 to 9 do
+         for b:= 1 to 9 do
+             begin
+                  inc(count, 1);
+                  gotoxy(b*2, a*2);
+                  if GDB[optionnivel][optiongrade][2][count]= '0' then  { vai mostrando numeros nao fixos }
+                     begin
+                          WritenaGrade(GDB[optionnivel][optiongrade][1][count], false);
+                          delay(100);
+                     end;
+             end;
+     delay(500);
+     window(x1+1, y2-2, x2-1, y2-1);
+     clrscr;
+     Centralizar('Pressione ENTER para voltar ao menu principal.', x1+1, x2-1, cortitulo);
+     repeat
+           tecla:= readkey;
+     until tecla= #13;
+end;  { fim procedure RevSol }
+////////////////////////////////////////////////////////////////////////////////
+procedure GridWindow(gridx, gridy: byte);  { alterna para a janela da grade, a esquerda }
+
+begin
+     window(x1+10, y1+2, x1+29, y1+21);  { abre janela da grade a esquerda }
+     gotoxy(gridx, gridy);
+end;  { fim procedure GridWindow }
+////////////////////////////////////////////////////////////////////////////////
+procedure InfoWindow(msg: byte);  { alterna para a janela de informacoes, a direita }
+
+begin
+     window(43, y1+4, x2-2, 15);
+
+     if infoy>= 12 then  { se for a ultima linha }
+        clrscr  { limpa a tela e vai p/ primeira linha }
+     else
+         gotoxy(1, infoy);  { vai pra linha seguinte }
+
+     case msg of  { mostra uma mensagem de acordo com o problema/situacao }
+          0:
+            begin
+                 clrscr;
+                 infoy:= wherey+1;
+                 GridWindow(gridx, gridy);
+            end;
+          1:
+            begin
+                 Datilografar('Que comece o jogo!');
+                 infoy:= wherey+1;
+                 GridWindow(gridx, gridy);
+            end;
+          2:
+            begin
+                 Datilografar('Esse e um numero fixo! Nao se pode altera-lo.');
+                 infoy:= wherey+1;
+                 GridWindow(gridx, gridy);
+            end;
+          3:
+            begin
+                 Datilografar('OPS! Esse numero nao pode ir ai!');
+                 infoy:= wherey+1;
+                 GridWindow(gridx, gridy);
+            end;
+          4:
+            begin
+                 clrscr;
+                 writeln;
+                 Datilografar('PARABENS! Voce solucionou a grade!!!');
+                 writeln;
+                 reset(BD);
+                           for alfa:= 1 to optionnivel-1 do  { posiciona o cursor no registro de nivel correspondente }
+                               read(BD, nivel);
+                           if ((60*min+10*secdec+secuni)-1) < nivel.grade[optiongrade] then
+                              begin
+                                   nivel.grade[optiongrade]:= (60*min+10*secdec+secuni)-1;  { salva o tempo se ele for menor que o tempo anterior }
+                                   Datilografar('Voce estabeleceu um novo recorde!');
+                                   writeln;
+                                   write('TEMPO: ', ((nivel.grade[optiongrade]) div 60):2, ':', ((nivel.grade[optiongrade]) mod 60):2);
+                                   readkey;
+                              end
+                           else
+                               if nivel.grade[optiongrade]= 0 then
+                                  nivel.grade[optiongrade]:= (60*min+10*secdec+secuni)-1;
+                           write(BD, nivel);
+                 close(BD);
+
+                 RevSol;
+                 quit5:= true;  { vai fechando as janelas de menus  }
+                 quit4:= true;
+                 quit3:= true;
+                 quit2:= true;
+                 {algo mais aki?}
+                 infoy:= wherey+1;
+                 GridWindow(gridx, gridy);
+            end;
+          5:
+            begin
+                 Datilografar('Huuum, voce preencheu completamente a grade, mas parece haver algum numero incorreto... Observe atentamente.');
+                 infoy:= wherey+1;
+                 GridWindow(gridx, gridy);
+            end;
+          6:
+            begin
+                 clrscr;
+                 Datilografar('Se voce escolher essa opcao, perdera o jogo atual. Deseja prosseguir?');
+                 writeln;
+                 writeln;
+                 write('         Sim            Nao');
+                 Sim:= false;
+                 gotoxy(23, 4);
+                 textcolor(corseta);
+                 write(#16);
+                 gotoxy(23, 4);
+
+                 repeat  { movimento da seta pelas opcoes }
+                       x:= wherex;
+                       y:= wherey;
+                       SN:= readkey;
+                       if SN= #0 then
+                          begin
+                               SN:= readkey;
+                               case SN of
+                                    #75:  { p/ esquerda }
+                                          begin
+                                               if x= 23 then
+                                                  begin
+                                                       write(' ');
+                                                       gotoxy(8, y);
+                                                       write(#16);
+                                                       gotoxy(8, y);
+                                                       Sim:= true;
+                                                  end;
+                                          end;
+                                    #77:  { p/ direita }
+                                          begin
+                                               if x= 8 then
+                                                  begin
+                                                       write(' ');
+                                                       gotoxy(23, y);
+                                                       write(#16);
+                                                       gotoxy(23, y);
+                                                       Sim:= false;
+                                                  end;
+                                          end;
+                               end;  { fim case }
+                          end;  { fim if }
+                 until SN= #13;  { repete ate que o usuario aperte ENTER }
+                 textcolor(cortexto);
+                 infoy:= wherey+1;
+            end;
+     end;  { fim case msg }
+end;  { fim procedure InfoWindow }
+////////////////////////////////////////////////////////////////////////////////
+procedure OptWindow;  { abre a janela de opcoes durante o jogo, no rodape direito }
+
+var
+          a:                  byte;
+          optx, opty:         byte;
+          tecla:              char;
+          optionopt:          byte;
+
+begin
+     window(43, 16, x2-2, y2-1);  { abre OptWindow com efeito (rodape direito) }
+     delline;
+     delay(45);
+     delline;
+     gotoxy(1, 7);
+     writeln('  Continuar jogo     Menu principal');
+     delay(35);
+     gotoxy(1, 2);
+     delline;
+     gotoxy(1, 7);
+     writeln('  Revelar solucao    Sair');
+     delay(30);
+     gotoxy(1, 2);
+     delline;
+     gotoxy(1, 5);  { fim abre OptWindow com efeito }
+     textcolor(corseta);
+     write(#16);
+     gotoxy(1, 5);
+
+     optionopt:= 1;
+
+     repeat  { navega pelas opcoes }
+           optx:= wherex;
+           opty:= wherey;
+           tecla:= readkey;
+           case tecla of
+                #0:
+                   begin
+                        tecla:= readkey;
+                        case tecla of
+                             #72:  { p/ cima }
+                                 begin
+                                      if opty <> 5 then
+                                         begin
+                                              write(' ');
+                                              gotoxy(optx, opty-1);
+                                              write(#16);
+                                              gotoxy(optx, opty-1);
+                                              optionopt:= optionopt-1;
+                                         end;
+                                 end;
+                             #80:  { p/ baixo }
+                                 begin
+                                      if opty <> 6 then
+                                         begin
+                                              write(' ');
+                                              gotoxy(optx, opty+1);
+                                              write(#16);
+                                              gotoxy(optx, opty+1);
+                                              optionopt:= optionopt+1;
+                                         end;
+                                 end;
+                             #75:  { p/ esquerda }
+                                 begin
+                                      if optx <> 1 then
+                                         begin
+                                              write(' ');
+                                              gotoxy(optx-19, opty);
+                                              write(#16);
+                                              gotoxy(optx-19, opty);
+                                              optionopt:= optionopt-2;
+                                         end;
+                                 end;
+                             #77:  { p/ direita }
+                                 begin
+                                      if optx <> 20 then
+                                         begin
+                                              write(' ');
+                                              gotoxy(optx+19, opty);
+                                              write(#16);
+                                              gotoxy(optx+19, opty);
+                                              optionopt:= optionopt+2;
+                                         end;
+                                 end;
+                        end;  { fim segundo case tecla }
+                   end;
+           end;  { fim primeiro case tecla }
+     until tecla in [#13, #27];  { ate que o usuario aperte ENTER ou ESC }
+     textcolor(cortexto);
+
+     if tecla= #13 then  { se a tecla foi ENTER }
+        begin
+             case optionopt of
+                  1:  { Continuar jogo }
+                    begin
+                         { there's nothing to do here... }
+                    end;
+                  2:  { Revelar solucao }
+                    begin
+                         InfoWindow(6);  { pergunta se o usuario tem certeza que deseja prosseguir }
+                         if Sim then
+                            begin
+                                 RevSol;  { abre janela para revelar solucao }
+                                 quit5:= true;  { vai fechando as janelas de menus  }
+                                 quit4:= true;
+                                 quit3:= true;
+                                 quit2:= true;
+                            end
+                         else
+                             begin
+                                  clrscr;
+                                  window(43, 16, x2-2, y2-1);  { voltar p/ a OptWindow }
+                                  optionopt:= 1;
+                             end;
+                    end;
+                  3:  { Menu principal }
+                    begin
+                         InfoWindow(6);
+                         if Sim then
+                            begin
+                                 quit5:= true;
+                                 quit4:= true;
+                                 quit3:= true;
+                                 quit2:= true;
+                            end
+                         else
+                             begin
+                                  clrscr;
+                                  window(43, 16, x2-2, y2-1);  { voltar p/ a OptWindow }
+                                  optionopt:= 1;
+                             end;
+                    end;
+                  4:  { Sair }
+                    begin
+                         InfoWindow(6);
+                         if Sim then
+                            begin
+                                 quit5:= true;
+                                 quit4:= true;
+                                 quit3:= true;
+                                 quit2:= true;
+                                 option1:= 3;
+                            end
+                         else
+                             begin
+                                  clrscr;
+                                  window(43, 16, x2-2, y2-1);  { voltar p/ a OptWindow }
+                                  optionopt:= 1;
+                             end;
+                    end;
+             end;  { fim do case }
+        end;  { fim do if }
+
+     if (optionopt= 1) or (tecla= #27) then  { se a opcao foi voltar ao jogo ou o usuario apertou ESC }
+        begin
+             for a:= 1 to 4 do  { fecha OptWindow }
+                 begin
+                      delay(40);
+                      gotoxy(1, 1);
+                      insline;
+                 end;  { fim fecha OptWindow }
+
+             quit4:= true;
+             GridWindow(gridx, gridy);  { volta p/ GridWindow }
+        end;
+end;  { fim procedure OptWindow }
+////////////////////////////////////////////////////////////////////////////////
+procedure Resultado;  { confere se o usuario completou a grade e se bate com a resolucao }
+
+var
+          win:           boolean;
+          a:             byte;
+          branco:        byte;
+
+begin
+     branco:= pos(' ', Usernume);
+     if branco= 0 then
+        begin
+             win:= true;
+             for a:= 1 to 81 do
+                 if Usernume[a] <> GDB[optionnivel][optiongrade][1][a] then
+                    win:= false;
+
+             if win= true then
+                begin
+                     InfoWindow(4);  { escreve: "PARABENS! Voce solucionou a grade!" }
+                     (*_*)
+                end
+             else
+                 InfoWindow(5);  { escreve: "Huuum, voce preencheu completamente a grade, mas parece haver algum numero incorreto. Observe atentamente." }
+        end;
+end;  { fim procedure Resultado }
+////////////////////////////////////////////////////////////////////////////////
+procedure Conferir(tecla: char);  { confere se tem algum numero igual ao que foi digitado pelo usuario na linha, coluna e regiao menor 3x3 }
+
+var
+          igual:                       boolean;
+          a, b:                        byte;
+
+begin
+     x:= wherex;
+     y:= wherey;
+     igual:= false;
+
+     a:= 1;
+     while (a <= 9) and (igual= false) do  { conferindo linha }
+           begin
+                if (tecla = Usernume[((y div 2 - 1)*9)+a]) and (a <> x div 2) then
+                   igual:= true;
+                inc(a, 1);
+           end;  { fim conferindo linha }
+
+     a:= 1;
+     while (a <= 9) and (igual= false) do  { conferindo coluna }
+           begin
+                if (tecla = Usernume[((a - 1)*9)+(x div 2)]) and (a <> y div 2) then
+                   igual:= true;
+                inc(a, 1);
+           end;  { fim conferindo coluna }
+
+     a:= 1;
+     while (a<= 9) and (igual= false) do  { conferindo quadrados menores }
+           begin
+                if (a*2 div 7) = (y div 7) then
+                   begin
+                        b:= 1;
+                        while (b <= 9) and (igual= false) do
+                              begin
+                                   if (b*2 div 7) = (x div 7) then
+                                      if (a <> y div 2) and (b <> x div 2) then
+                                         if tecla = Usernume[(a - 1)*9+b] then
+                                            igual:= true;
+                                   inc(b, 1);
+                              end;
+                   end;
+                inc(a, 1);
+           end;  { fim conferindo quadrados menores }
+
+     if igual= true then  { se foi encontrado algum numero igual }
+        begin
+             WritenaGrade(tecla, true);  { escreve o numero com a cor diferente (azul) }
+             InfoWindow(3);  { escreve: "OPS! Esse numero nao pode ir ai!" }
+        end
+     else
+         begin
+              WritenaGrade(tecla, false);  { se o numero puder ser colocado }
+         end;
+end;  { fim procedure Conferir }
+////////////////////////////////////////////////////////////////////////////////
+procedure Clock;  { mostra o tempo de jogo }
+
+var
+   dots:        char;
+
+begin
+     repeat
+           (*if mile mod 500= 0 then*)
+           if mile= 0 then
+              begin
+                   window(34, 4, 41, 4);
+                   write(min);
+                   write(':');
+                   write(secdec);
+                   write(secuni);
+                   if secuni= 9 then
+                      begin
+                           secuni:= 0;
+                           if secdec= 5 then
+                              begin
+                                   secdec:= 0;
+                                   inc(min, 1);
+                              end
+                           else
+                               inc(secdec, 1);
+                      end
+                   else
+                       inc(secuni, 1);
+                   GridWindow(gridx, gridy);
+              end;
+           (*else
+               begin
+                    window(3, 3, 9, 3);
+                    if min>= 10 then
+                       gotoxy(3, 1)
+                    else
+                        gotoxy(2, 1);
+                    textcolor(8);
+                    write(':');
+                    textcolor(cortexto);
+                    GridWindow(gridx, gridy);
+               end;*)
+
+           if mile= 999 then
+              mile:= 0
+           else
+               inc(mile, 1);
+           delay(1);
+     until keypressed;
+end;  { fim procedure Clock }
+////////////////////////////////////////////////////////////////////////////////
+procedure GameWindow;  { o jogo comeca a rolar de verdade por aki }
+
+var
+          a, b:         byte;
+
+begin
+     textcolor(corborda);
+     b:= 20;
+     for a:= 0 to 19 do  { abrir janela estilosa com a grade de um lado e info-window do outro }
+         begin
+              window(x1+1, y1+1, 40, y2-1);
+              gotoxy(b-a, 1);
+              write(bordachr);
+              gotoxy(b+a, 1);
+              write(bordachr);
+              gotoxy(1, 1);
+              insline;
+
+              window(41, y1+1, x2-1, y2-1);
+              gotoxy(b-a, 22);
+              write(bordachr);
+              gotoxy(b+a, 22);
+              write(bordachr);
+              gotoxy(1, 1);
+              delline;
+
+              delay(40);
+         end;
+     for a:= 1 to 21 do
+         begin
+              window(x1+1, y1+1, 40, y2-1);  { efeito na GridWindow (esquerda) }
+              insline;
+
+              window(41, y1+1, x2-1, y2-1);  { efeito na InfoWindow (direita) }
+              if a <> 1 then
+                 begin
+                      gotoxy(1, 22);
+                      textcolor(1);
+                      write(#179);
+                      gotoxy(1, 1);
+                 end;
+              delline;
+
+              delay(40);
+         end;  { fim do efeito da janela }
+
+     writeln;
+     Centralizar('JANELA DE INFORMACOES', 41, x2-1, cortitulo);
+
+     window(43, 17, x2-2, y2-1);  { OptWindow (rodape direito) }
+     gotoxy(1, 5);
+     textcolor(corborda);
+     for a:= 1 to 35 do
+         write('_');  { <-- olha, uma carinha! LOL}
+     textcolor(cortexto);
+     writeln;
+     Centralizar('OPCOES', 43, x2-2, cortitulo);
+
+     window(x1+10, y1+2, x1+29, y1+21);  { abre janela da grade a esquerda }
+     GradeMolde;  { desenha esqueleto da grade sem numeros }
+     Binstr:= '000000000000000000000000000000000000000000000000000000000000000000000000000000000';  { zera posicoes ocupadas p/ poder pintar o fundo da grade }
+     PaintBack(50);  { pinta o fundo com os numeros fixos }
+     Binstr:= GDB[optionnivel][optiongrade][2];  { define casas ocupadas }
+
+     Usernume:= '';  { zera essa string que vai armazenar os numeros colocados pelo usuario }
+     for a:= 1 to 81 do  { inicializa a string com os numeros fixos e espacos}
+         if Binstr[a]= '1' then
+            Usernume:= concat(Usernume, GDB[optionnivel][optiongrade][1][a])
+         else
+             Usernume:= concat(Usernume, ' ');
+
+     delay(250);
+     window(3, 3, 10, 11);
+     writeln('NIVEL');
+     case optionnivel of
+          1: writeln('Facil');
+          2: writeln('Medio');
+          3: writeln('Dificil');
+     end;
+     writeln;
+     writeln('GRADE');
+     writeln('  ', optiongrade);
+     writeln;
+     writeln('RECORDE');
+     reset(BD);
+               for alfa:= 1 to optionnivel do
+                   read(BD, nivel);
+               writeln((nivel.grade[optiongrade] div 60):2, ':', (nivel.grade[optiongrade] mod 60):2);
+     close(BD);
+     window(33, 3, 40, 4);  { janelinha para o tempo no canto superior esquerdo }
+     writeln(' TEMPO');
+     min:= 0;
+     secdec:= 0;
+     secuni:= 0;
+     mile:= 0;
+     window(x1+2, y2-2, 39, y2-1);  { janelinha para detalhes no rodape }
+     write('ESC - Opcoes     DEL - Apaga numero');
+     delay(250);
+     infoy:= 1;
+     InfoWindow(1);  { escreve: "Que comece o jogo!" }
+     gridx:= 2;
+     gridy:= 2;
+
+     quit5:= false;
+     repeat  { movimentacao pela grade e colocacao/delecao de numeros }
+           Clock;
+           tecla:= readkey;
+           if tecla= #0 then
+              begin
+                   tecla:= readkey;
+                   case tecla of
+                        #72: {p/ cima}
+                            begin
+                                 if gridy <> 2 then
+                                    gotoxy(gridx, gridy-2);
+                            end;
+                        #80: {p/ baixo}
+                            begin
+                                 if gridy <> 18 then
+                                    gotoxy(gridx, gridy+2);
+                            end;
+                        #75: {p/ esquerda}
+                            begin
+                                 if gridx <> 2 then
+                                    gotoxy(gridx-2, gridy);
+                            end;
+                        #77: {p/ direita}
+                            begin
+                                 if gridx <> 18 then
+                                    gotoxy(gridx+2, gridy);
+                            end;
+                         #83: { delete }
+                             begin
+                                  if Binstr[(gridx div 2) + (((gridy div 2)-1)*9)] = '0' then  { se nao for a casa de um numero fixo }
+                                     begin
+                                          WritenaGrade(' ', false);  { apaga na grade o que tinha antes }
+                                          Usernume[(gridx div 2)+(((gridy div 2)-1)*9)]:= ' ';  { apaga na posicao dessa string o que tinha antes }
+                                     end
+                                  else
+                                      InfoWindow(2);  { escreve: "Esse e um numero fixo! Nao e possivel altera-lo." }
+                             end;
+                   end;
+                   gridx:= wherex;
+                   gridy:= wherey;
+              end
+           else
+               if tecla in [#49..#57] then  { se a tecla for um numero entre 1 e 9 }
+                  begin
+                       if Binstr[(gridx div 2) + (((gridy div 2)-1)*9)] = '0' then  { se nao for a casa de um numero fixo }
+                          begin
+                               Usernume[(gridx div 2)+(((gridy div 2)-1)*9)]:= tecla;  { coloca na posicao dessa string o numero digitado pelo usuario }
+                               Conferir(tecla);  { procedure p/ conferir numeros }
+                               Resultado;  { procedure p/ ver se o usuário ganhou o jogo }
+                          end
+                       else
+                           InfoWindow(2);  { escreve: "Esse e um numero fixo! Nao e pssivel altera-lo." }
+                  end
+               else
+                   begin
+                        if tecla= #27 then  { se a tecla for ESC }
+                           begin
+                                repeat
+                                      quit4:= false;
+                                      OptWindow;  { abre menu de opcoes no rodape direito durante o jogo }
+                                until quit4= true;
+                           end;
+                   end;
+     until quit5= true;
+end;  { fim procedure GameWindow }
+////////////////////////////////////////////////////////////////////////////////
+procedure Menu3;  { mostra as grades de cada nivel }
+
+var
+          xgrade, ygrade:         byte;
+          tecla3:                 char;
+
+begin
+     case optionnivel of  { abre window em posicoes diferentes dependendo do nivel }
+          1: window(11, 10, 29, 20);
+          2: window(36, 10, 54, 20);
+          3: window(60, 10, 78, 20);
+     end;
+
+     textcolor(cortitulo);
+     reset(BD);
+               for alfa:= 1 to optionnivel do
+                   read(BD, nivel);
+               for alfa:= 1 to 5 do
+                   begin
+                        writeln('  Grade ', alfa, '  [', ((nivel.grade[alfa]) div 60):2, ':', ((nivel.grade[alfa]) mod 60):2, ']');
+                        writeln;
+                   end;
+     close(BD);
+     textcolor(cortexto);
+     optiongrade:= 1;
+     gotoxy(1, 1);
+     textcolor(corseta);
+     write(#16);
+     gotoxy(1, 1);
+
+     repeat
+           xgrade:= wherex;
+           ygrade:= wherey;
+           tecla3:= readkey;
+           case tecla3 of
+                #0:
+                   begin
+                        tecla3:= readkey;
+                        case tecla3 of  { movimentacao da seta pelas opcoes }
+                             #72:  { p/ cima }
+                                 if ygrade <> 1 then
+                                    begin
+                                         write(' ');
+                                         gotoxy(xgrade, ygrade-2);
+                                         write(#16);
+                                         gotoxy(xgrade, ygrade-2);
+                                         dec(optiongrade, 1);
+                                    end;
+                             #80:  { p/ baixo }
+                                 if ygrade <> 9 then
+                                    begin
+                                         write(' ');
+                                         gotoxy(xgrade, ygrade+2);
+                                         write(#16);
+                                         gotoxy(xgrade, ygrade+2);
+                                         inc(optiongrade, 1);
+                                    end;
+                        end;  { fim segundo tecla3 }
+                   end;
+           end;  { fim primeiro tecla3 }
+     until tecla3 in [#13, #27];  { repete ate que o usuario aperte ENTER ou ESC }
+     textcolor(cortexto);
+
+     if tecla3= #13 then  { se o usuario apertou ENTER }
+        begin
+             GameWindow;   { procedure p/ abrir janela com a grade escolhida e comecar o jogo }
+        end
+     else  { se o usuario apertou ESC }
+         begin
+              quit3:= true;  { sai do menu3 e volta p/ o menu2 }
+         end;
+end;  { fim procedure Menu3 }
+////////////////////////////////////////////////////////////////////////////////
+procedure Menu2;  { mostra opcoes de nivel de dificuldade }
+
+var
+          xnivel, ynivel:           byte;
+          tecla2:                   char;
+
+begin
+     window(x1+1, y1+1, x2-1, y2-1);  { abre janela principal e limpa }
+     clrscr;
+     writeln;
+     Centralizar(
+     'Niveis', x1+1, x2-1, cortitulo);
+     textcolor(cortitulo);
+     gotoxy(12, 5);    write('Facil');
+     gotoxy(37, 5);    write('Medio');
+     gotoxy(61, 5);    write('Dificil');
+     textcolor(corseta);
+     gotoxy(14, 6);    write(#30);
+     textcolor(cortexto);
+     xnivel:= 14;
+     ynivel:= 6;
+     optionnivel:= 1;
+
+     repeat
+           window(x1+1, y1+1, x2-1, y2-1);
+           gotoxy(xnivel, ynivel);
+
+           textcolor(corseta);
+           repeat  { navegacao pelas opcoes }
+                 tecla2:= readkey;
+                 case tecla2 of
+                      #0:
+                         begin
+                              tecla2:= readkey;
+                              case tecla2 of
+                                   #77:  { p/ direita }
+                                       if xnivel <> 64 then
+                                          begin
+                                               write(' ');
+                                               gotoxy(xnivel+25, ynivel);
+                                               write(#30);
+                                               gotoxy(xnivel+25, ynivel);
+                                               inc(optionnivel, 1);
+                                               sound(1000);
+                                               delay(10);
+                                               nosound;
+                                          end;  { fim if da direita }
+                                   #75:  { p/ esquerda }
+                                       if xnivel <> 14 then
+                                          begin
+                                               write(' ');
+                                               gotoxy(xnivel-25, ynivel);
+                                               write(#30);
+                                               gotoxy(xnivel-25, ynivel);
+                                               dec(optionnivel, 1);
+                                               sound(1000);
+                                               delay(10);
+                                               nosound;
+                                          end;  { fim if da esquerda }
+                              end;  { fim segundo case tecla2 }
+                         end;
+                 end;  { fim primeiro case tecla2 }
+                 xnivel:= wherex;
+                 ynivel:= wherey;
+           until tecla2 in [#13, #27];  { repete ate o usuario apertar ENTER ou ESC }
+           textcolor(cortexto);
+
+           if tecla2= #13 then  { se o usuario apertou ENTER }
+              begin
+                   repeat
+                         quit3:= false;
+                         Menu3;
+                   until quit3= true;
+                   clrscr;
+              end
+           else  { se o usuario apertou ESC }
+                 quit2:= true;  { sai do menu2 e volta p/ o menu principal }
+
+     until quit2= true;
+end;  { fim procedure Menu2 }
+////////////////////////////////////////////////////////////////////////////////
+procedure Menu;  { mostra menu principal }
+
+var
+            a:                        byte;
+            tecla1:                   char;
+            xmain, ymain:             byte;
+
+begin
+     xmain:= 1;
+     ymain:= 1;
+     option1:= 1;
+
+     window(x1+1, y1+1, x2-1, y2-1);  {2, 2, 79, 23}
+     clrscr;
+     writeln;
+     writeln;
+
+     window(34, 14, 46, 21);
+     writeln('  JOGAR');
+     writeln;
+     writeln('  INSTRUCOES');
+     writeln;
+     writeln('  RESET');
+     writeln;
+     writeln('  SAIR');
+     gotoxy(1, 1);
+     textcolor(corseta);
+     write(#16);
+     gotoxy(1, 1);
+
+     repeat
+           window(23, 4, 58, 11);
+           repeat
+                 Matrix;
+           until keypressed;
+           window(34, 14, 46, 21);
+
+           textcolor(corseta);
+           gotoxy(xmain, ymain);
+           write(#16);
+           gotoxy(xmain, ymain);
+           xmain:= wherex;
+           ymain:= wherey;
+           tecla1:= readkey;
+           case tecla1 of  { navega entre as opcoes }
+                #0:
+                   begin
+                        tecla1:= readkey;
+                        case tecla1 of
+                             #72:  { p/ cima }
+                                 begin
+                                      if ymain <> 1 then
+                                         begin
+                                              write(' ');
+                                              gotoxy(xmain, ymain-2);
+                                              write(chr(16));
+                                              option1:= option1-1;
+                                              gotoxy(xmain, ymain-2);
+                                              sound(1000);
+                                              delay(10);
+                                              nosound;
+                                         end;
+                                 end;
+                             #80:  { p/ baixo }
+                                 begin
+                                      if ymain <> 7 then
+                                         begin
+                                              write(' ');
+                                              gotoxy(xmain, ymain+2);
+                                              write(chr(16));
+                                              option1:= option1+1;
+                                              gotoxy(xmain, ymain+2);
+                                              sound(1000);
+                                              delay(10);
+                                              nosound;
+                                         end;
+                                 end;
+                        end;  { fim segundo case tecla }
+                   end;
+           end;  { fim primeiro case tecla }
+           xmain:= wherex;
+           ymain:= wherey;
+     until tecla1= #13;  { movimenta ate que o usuario aperte ENTER }
+     textcolor(cortexto);
+     sound(1000);
+     delay(20);
+     nosound;
+
+     case option1 of
+          1:  { JOGAR }
+            begin
+                 repeat
+                       quit2:= false;
+                       Menu2;  { abre Menu2 com opcoes FACIL, MEDIO e DIFICIL }
+                 until quit2= true;
+            end;
+          2:  { INSTRUCOES }
+            begin
+                 window(x1+9, y1+1, x2-10, y2-2);   {10, 2, 70, 22}
+                 clrscr;
+                 writeln;
+                 Centralizar('INSTRUCOES', x1+9 ,x2-10, cortitulo);    {10, 70}
+                 writeln;
+                 Datilografar('Como jogar');
+                 writeln;
+                 writeln;
+                 writeln;
+                 Datilografar('O jogo consiste em preencher completamente uma grade 9x9 com numeros.');
+                 writeln;
+                 writeln;
+                 Datilografar('Cada linha deve conter os algarismos de 1 a 9, sem repeticao.');
+                 writeln;
+                 Datilografar('O mesmo se repete para cada coluna.');
+                 writeln;
+                 writeln;
+                 Datilografar('E tambem para os grupos menores de 3x3 quadradinhos.');
+
+                 clrscr;
+                 writeln;
+                 Centralizar('INSTRUCOES', x1+9 ,x2-10, cortitulo);    {10, 70}
+                 writeln;
+                 Datilografar('Teclas de comando');
+                 writeln;
+                 writeln;
+                 writeln;
+                 Datilografar('Use as setas do teclado para mover a seta indicadora entre as opcoes.');
+                 writeln;
+                 Datilografar('Pressione a tecla ENTER para selecionar a opcao desejada.');
+                 writeln;
+                 Datilografar('E use a tecla ESC para voltar ao menu anterior.');
+                 writeln;
+                 writeln;
+                 Datilografar('As setas do teclado movimentam o cursor pela grade. ');
+                 writeln;
+                 Datilografar('Para inserir um numero na grade, posicione o cursor no quadradinho desejado e pressione a tecla numerica correspondente.');
+                 writeln;
+                 Datilografar('Caso queira apagar um numero, pressione a tecla DELETE com o cursor sobre o numero que desejar.');
+                 writeln;
+                 writeln;
+                 Datilografar('Durante o jogo, a tecla ESC tambem mostra um menu de opcoes.');
+                 clrscr;
+            end;
+          3:  { RESET }
+            begin
+                 window(x1+9, y1+1, x2-10, y2-2);
+                 clrscr;
+                 writeln;
+                 Centralizar('RESET', x1+9, x2-10, cortitulo);
+                 writeln;
+                 Datilografar(' A opcao RESET apagara todos os tempos recordes salvos. Tem certeza que deseja prosseguir?');
+                 gotoxy(31, 9);
+                 write('SIM');
+                 gotoxy(31, 11);
+                 write('NAO');
+                 Sim:= false;
+                 gotoxy(29, 11);
+                 textcolor(corseta);
+                 write(#16);
+                 gotoxy(29, 11);
+
+                 repeat  { movimento da seta pelas opcoes }
+                       x:= wherex;
+                       y:= wherey;
+                       SN:= readkey;
+                       if SN= #0 then
+                          begin
+                               SN:= readkey;
+                               case SN of
+                                    #72:  { p/ cima }
+                                          begin
+                                               if y<> 9 then
+                                                  begin
+                                                       write(' ');
+                                                       gotoxy(29, y-2);
+                                                       write(#16);
+                                                       gotoxy(29, y-2);
+                                                       Sim:= true;
+                                                  end;
+                                          end;
+                                    #80:  { p/ baixo }
+                                          begin
+                                               if y<> 11 then
+                                                  begin
+                                                       write(' ');
+                                                       gotoxy(29, y+2);
+                                                       write(#16);
+                                                       gotoxy(29, y+2);
+                                                       Sim:= false;
+                                                  end;
+                                          end;
+                               end;  { fim case }
+                          end;  { fim if }
+                 until SN= #13;  { repete ate que o usuario aperte ENTER }
+                 textcolor(cortexto);
+
+                 if Sim then
+                    begin
+                         rewrite(BD);
+                                     for alfa:= 1 to 3 do
+                                         begin
+                                              for beta:= 1 to 5 do
+                                                  nivel.grade[beta]:= 0;  { e inicializa os tempos zerados }
+                                              write(BD, nivel);
+                                         end;
+                         close(BD);
+                         clrscr;
+                         writeln;
+                         Centralizar('Recordes apagados!', x1+9, x2-10, cortexto);
+                         readkey;
+                    end;
+                 clrscr;
+            end;
+     end;  { fim case option1 }
+
+     if option1= 4 then
+        begin
+             window(x1+1, y1+1, x2-1, y2-1);   {2, 2, 79, 23}
+             clrscr;
+             for a:= 1 to 2 do
+                 begin
+                      gotoxy(x1+9, y1+10);                              
+                      delay(250);
+                      Centralizar('Ate logo o/', x1+1, X2-1, cortitulo);
+                      gotoxy(x1+9, y1+10);                              
+                      delay(250);
+                      Centralizar('Ate logo o|', x1+1, X2-1, cortitulo);
+                      gotoxy(x1+9, y1+10);                              
+                      delay(250);
+                      Centralizar('Ate logo o\', x1+1, X2-1, cortitulo);
+                      gotoxy(x1+9, y1+10);                              
+                      delay(250);
+                      Centralizar('Ate logo o|', x1+1, X2-1, cortitulo);
+                 end;
+             quitall:= true;
+             delay(500);
+        end;
+end;  { fim procedure Menu }
+////////////////////////////////////////////////////////////////////////////////
+
+begin  (* PROGRAMA PRINCIPAL *)
+
+     {LEGENDA: GDB[nivel(1 a 3)][numero da grade(1 a 5)][elementos(1) / casas ocupadas(2)]}
+     { FACIL }
+     GDB[1][1][1]:= '943871265167254983582396417859732641731649528624185379218963754375428196496517832';  { inicializando as "fitas fixas" }
+     GDB[1][1][2]:= '110100001001000001010001001000010110010111010011010000100100010100000100100001011';
+     GDB[1][2][1]:= '539674281248513697167982435826791543971345862453268179615837924792456318384129756';
+     GDB[1][2][2]:= '100000010001011101101000100001100100100010001001001100001000101101110100010000001';
+     GDB[1][3][1]:= '536179824924368157718425936245916783163857249879243615492631578651784392387592461';
+     GDB[1][3][2]:= '001101000010001010101110101011101101000000000101101110101011101010100010000101100';
+     GDB[1][4][1]:= '365829714182473956794165832673218495519634287248597361451382679936741528827956143';
+     GDB[1][4][2]:= '100010001000111100010010000010000010111000111010000010000010010001111000100010001';
+     GDB[1][5][1]:= '132589476687241593495673218319462785728315964564798321873956142951824637246137859';
+     GDB[1][5][2]:= '011001011001001101011010010000110001111101111100011000010010110101100100110100110';
+     { MEDIO }
+     GDB[2][1][1]:= '287541963314769528956238714493126875165897432872453196721385649648912357539674281';
+     GDB[2][1][2]:= '000000100011110000010001001010011100010000010001110010100100010000011110001000000';
+     GDB[2][2][1]:= '967521348281634579534987621176293485359748162842156793418372956793865214625419837';
+     GDB[2][2][2]:= '001000100010101010100101001011000110000000000011000110100101001010101010001000100';
+     GDB[2][3][1]:= '723154896914687532865293147451936728679812453382475619148729365597361284236548971';
+     GDB[2][3][2]:= '001010100011101110000010000010000010101000101010000010000010000011101110001010100';
+     GDB[2][4][1]:= '581437629423169857967285431379624518852971346614853792195748263238596174746312985';
+     GDB[2][4][2]:= '110000011100111001000000000010101010010000010010101010000000000100111001110000011';
+     GDB[2][5][1]:= '842659317697231485351784962235416798786923541419578236923865174564197823178342659';
+     GDB[2][5][2]:= '000000000001110000001001110001101010010010010010101100011100100000011100000000000';
+     { DIFICIL }
+     GDB[3][1][1]:= '732986451185472639946513827317628945264795318598134762421867593673259184859341276';
+     GDB[3][1][2]:= '010100100010000100010101011010010000100101001000010010110101010001000010001001010';
+     GDB[3][2][1]:= '623417859984625713571938264157243698498576321236189547815364972762891435349752186';
+     GDB[3][2][2]:= '010100010100010101001000000010001000000111000000100010000000100101010001010001010';
+     GDB[3][3][1]:= '587693412196274853342185976259837641874916325631542798725369184413758269968421537';
+     GDB[3][3][2]:= '100100011000011100011000000001010100100000001001010100000000110001110000110001001';
+     GDB[3][4][1]:= '769825413214693875358417269186579342435281697972346581641932758893754126527168934';
+     GDB[3][4][2]:= '011010000001000101010100000100110100000000000001011001000001010101000100000010110';
+     GDB[3][5][1]:= '483951627579642831126873459342795186791386542658214973937468215214539768865127394';
+     GDB[3][5][2]:= '001110010001000100100010001100110001010000010100011001100010001001000100010011100';
+
+     assign(BD, 'tempos.bin');  { "invoca" o arquivo Mwahahahha }
+     {$I-}
+     reset(BD);  { ABRE o arquivo e posiciona no registro zero }
+               if IOResult<> 0 then  { se nao existir o arquivo... }
+                  begin
+                       rewrite(BD);  { ...cria um novo }
+     {$I+}
+                       for alfa:= 1 to 3 do
+                           begin
+                                for beta:= 1 to 5 do
+                                    nivel.grade[beta]:= 0;  { e inicializa os tempos zerados }
+                                write(BD, nivel);
+                           end;
+                  end;
+     close(BD);
+
+     Borda;
+
+     {window(23, 4, 58, 11);}
+     (*window(x1+1, y1+1, x2-1, y2-1);
+     for z:= 1 to 10 do
+         begin
+              Matrix;
+         end;
+     window(34, 14, 46, 19);*)
+
+     repeat
+           quitall:= false;
+           Menu;  { abre menu principal com opcoes JOGAR, INSTRUCOES e SAIR }
+     until {option1= 3;} quitall= true;
+
+end.  (* FIM PROGRAMA PRINCIPAL *)  { \(õ3õ)/~YAY, finished! }
