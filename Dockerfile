@@ -4,7 +4,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends fp-compiler=3.2.2+dfsg-46 \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /build
-COPY ["pascal/Sudoku 2.2.txt", "sudoku.pas"]
+COPY ["original/Sudoku 2.2.txt", "sudoku.pas"]
 # -Mtp: Turbo Pascal mode (16-bit integer keeps the tempos.bin layout).
 RUN fpc -Mtp sudoku.pas
 
